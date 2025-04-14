@@ -1,0 +1,72 @@
+# COVID-19 Data Analysis Using Pandas
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Load the dataset (replace with your local file path or URL)
+df = pd.read_csv('covid_19_data.csv')
+
+# Display basic info
+print("Initial Data Info:")
+print(df.info())
+
+# Rename columns for consistency
+df.columns = [col.strip().replace('/', '_').lower() for col in df.columns]
+
+# Convert 'observationdate' to datetime
+df['observationdate'] = pd.to_datetime(df['observationdate'])
+
+# Drop irrelevant columns if any
+if 'sno' in df.columns:
+    df.drop('sno', axis=1, inplace=True)
+
+# Check for null values
+print("\nMissing values:")
+print(df.isnull().sum())
+
+# Fill or drop missing values if needed
+df.fillna(0, inplace=True)
+
+# Group data by country and date
+df_grouped = df.groupby(['country_region', 'observationdate']).sum().reset_index()
+
+# Top 10 countries by total confirmed cases
+total_confirmed = df_grouped.groupby('country_region')['confirmed'].max().sort_values(ascending=False).head(10)
+
+# Bar chart of top 10 countries
+plt.figure(figsize=(10, 6))
+total_confirmed.plot(kind='bar', color='skyblue')
+plt.title('Top 10 Countries by Confirmed COVID-19 Cases')
+plt.ylabel('Confirmed Cases')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+# Line plot of daily confirmed cases for selected countries
+countries = ['US', 'India', 'Brazil']
+plt.figure(figsize=(12, 6))
+for country in countries:
+    data = df_grouped[df_grouped['country_region'] == country]
+    plt.plot(data['observationdate'], data['confirmed'], label=country)
+
+plt.title('Daily Confirmed Cases Over Time')
+plt.xlabel('Date')
+plt.ylabel('Confirmed Cases')
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+# Create a pivot table for monthly analysis
+monthly_summary = df_grouped.copy()
+monthly_summary['month'] = monthly_summary['observationdate'].dt.to_period('M')
+monthly_pivot = monthly_summary.pivot_table(index='month', columns='country_region', values='confirmed', aggfunc='sum')
+
+# Heatmap of monthly confirmed cases
+plt.figure(figsize=(12, 8))
+sns.heatmap(monthly_pivot.fillna(0), cmap='Reds')
+plt.title('Monthly COVID-19 Impact by Country')
+plt.ylabel('Month')
+plt.xlabel('Country')
+plt.tight_layout()
+plt.show()
